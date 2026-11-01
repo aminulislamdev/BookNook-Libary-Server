@@ -283,13 +283,36 @@ async function handleBorrowBook(req, res) {
 
     const effectiveUserId = req.user?.id || "";
     const effectiveUserEmail = req.user?.email || "";
+    const effectiveUserName = req.user?.name || "Reader";
 
     const existingLoan = await borrows.findOne({
       bookId, $or: [{ userId: effectiveUserId }, { userEmail: effectiveUserEmail }], status: "active"
     });
     if (existingLoan) return res.status(400).json({ message: "You have already borrowed this book." });
 
-   
+    const book = await books.findOne({ _id: new ObjectId(bookId) });
+    if (!book) return res.status(404).json({ message: "Book not found." });
+    if (Number(book.availableCopies ?? 0) <= 0) return res.status(400).json({ message: "Not Available." });
+
+    const updateResult = await books.updateOne(
+      { _id: new ObjectId(bookId), availableCopies: { $gt: 0 } },
+      { $inc: { availableCopies: -1 } }
+    );
+    if (updateResult.modifiedCount === 0) return res.status(400).json({ message: "Not Available." });
+
+    const now = new Date().toISOString();
+    const finalDueDate = dueDate || returnDate || new Date(Date.now() + 14 * 86400000).toISOString();
+
+    const borrowRecord = {
+      bookId, bookTitle: book.title, bookImage: book.image,
+      userId: effectiveUserId, userName: effectiveUserName, userEmail: effectiveUserEmail,
+      borrowDate: borrowDate || now, returnDate: finalDueDate, dueDate: finalDueDate,
+      returnedAt: null, status: "active", createdAt: now,
+    };
+
+    const result = await borrows.insertOne(borrowRecord);
+    const createdBorrow = await borrows.findOne({ _id: result.insertedId });
+    res.status(201).json({ message: "Book borrowed.", borrow: formatBorrow(createdBorrow, book) });
   } catch (err) {
     res.status(500).json({ message: "Failed to borrow." });
   }
