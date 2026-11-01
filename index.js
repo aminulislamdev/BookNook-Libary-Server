@@ -276,6 +276,30 @@ app.get("/borrows", verifyJWT, handleGetBorrows);
 
 
 
+async function handleBorrowBook(req, res) {
+  try {
+    const { bookId, dueDate, returnDate, borrowDate } = req.body;
+    if (!bookId || !ObjectId.isValid(bookId)) return res.status(400).json({ message: "Valid book ID required." });
+
+    const effectiveUserId = req.user?.id || "";
+    const effectiveUserEmail = req.user?.email || "";
+
+    const existingLoan = await borrows.findOne({
+      bookId, $or: [{ userId: effectiveUserId }, { userEmail: effectiveUserEmail }], status: "active"
+    });
+    if (existingLoan) return res.status(400).json({ message: "You have already borrowed this book." });
+
+   
+  } catch (err) {
+    res.status(500).json({ message: "Failed to borrow." });
+  }
+}
+
+app.post("/api/borrows", verifyJWT, handleBorrowBook);
+app.post("/borrows", verifyJWT, handleBorrowBook);
+
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
