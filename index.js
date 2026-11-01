@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import "dotenv/config";
 import { MongoClient, ObjectId } from "mongodb";
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 const app = express();
 const PORT = process.env.PORT || 8000;
@@ -14,6 +15,10 @@ if (!uri) {
   console.error("DB_URL is missing from the server environment.");
   process.exit(1);
 }
+
+const NEXTJS_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const JWKS = createRemoteJWKSet(new URL(`${NEXTJS_APP_URL}/api/auth/jwks`));
+
 
 const client = new MongoClient(uri);
 const connectedClient = await client.connect();
