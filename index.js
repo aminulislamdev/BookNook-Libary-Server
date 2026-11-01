@@ -229,6 +229,29 @@ app.put("/books/:id", verifyJWT, handleUpdateBook);
 app.patch("/books/:id", verifyJWT, handleUpdateBook);
 
 
+async function handleDeleteBook(req, res) {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid book ID." });
+
+    const activeLoan = await borrows.findOne({ bookId: id, status: "active" });
+    if (activeLoan) return res.status(400).json({ message: "Cannot delete a book on loan." });
+
+    const result = await books.deleteOne({ _id: new ObjectId(id) });
+    if (result.deletedCount === 0) return res.status(404).json({ message: "Book not found." });
+
+    res.json({ message: "Book deleted." });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to delete book." });
+  }
+}
+
+app.delete("/api/books/:id", verifyJWT, handleDeleteBook);
+app.delete("/books/:id", verifyJWT, handleDeleteBook);
+
+
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
