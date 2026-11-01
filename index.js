@@ -161,6 +161,36 @@ app.get("/api/books/:id", handleGetBookById);
 app.get("/books/:id", handleGetBookById);
 
 
+
+async function handleAddBook(req, res) {
+  try {
+    const { title, author, category = "Fiction", totalCopies = 1, description = "", image = "" } = req.body;
+    if (!title?.trim() || !author?.trim()) return res.status(400).json({ message: "Title and author required." });
+
+    const copies = Math.max(1, parseInt(totalCopies, 10) || 1);
+    const now = new Date().toISOString();
+
+    const newBook = {
+      title: title.trim(), author: author.trim(), category,
+      totalCopies: copies, availableCopies: copies,
+      description: description.trim(), image: image.trim(),
+      addedBy: { id: req.user?.id || "", name: req.user?.name || "Anonymous", email: req.user?.email || "" },
+      userId: req.user?.id || "", userName: req.user?.name || "Anonymous", userEmail: req.user?.email || "",
+      createdAt: now, updatedAt: now,
+    };
+
+    const result = await books.insertOne(newBook);
+    const created = await books.findOne({ _id: result.insertedId });
+    res.status(201).json({ message: "Book added.", book: formatBook(created) });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to add book." });
+  }
+}
+
+app.post("/api/books", verifyJWT, handleAddBook);
+app.post("/books", verifyJWT, handleAddBook);
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
