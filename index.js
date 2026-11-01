@@ -76,6 +76,17 @@ function formatBorrow(doc, bookDoc = null) {
   };
 }
 
+async function handleGetBooks(req, res) {
+  try {
+    const rawBooks = await books.find({}).sort({ _id: -1 }).toArray();
+    res.json({ books: rawBooks.map(formatBook), total: rawBooks.length });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch books." });
+  }
+}
+
+app.get("/api/books", handleGetBooks);
+app.get("/books", handleGetBooks);
 
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
