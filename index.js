@@ -191,6 +191,44 @@ app.post("/api/books", verifyJWT, handleAddBook);
 app.post("/books", verifyJWT, handleAddBook);
 
 
+async function handleUpdateBook(req, res) {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid book ID." });
+
+    const existing = await books.findOne({ _id: new ObjectId(id) });
+    if (!existing) return res.status(404).json({ message: "Book not found." });
+
+    const { title, author, category, description, image, totalCopies } = req.body;
+    const updateData = { updatedAt: new Date().toISOString() };
+
+    if (title !== undefined) updateData.title = title.trim();
+    if (author !== undefined) updateData.author = author.trim();
+    if (category !== undefined) updateData.category = category;
+    if (description !== undefined) updateData.description = description.trim();
+    if (image !== undefined) updateData.image = image.trim();
+
+    if (totalCopies !== undefined) {
+      const newTotal = Math.max(1, parseInt(totalCopies, 10) || 1);
+      const activeLoans = await borrows.countDocuments({ bookId: id, returnedAt: null });
+      updateData.totalCopies = newTotal;
+      updateData.availableCopies = Math.max(0, newTotal - activeLoans);
+    }
+
+    await books.updateOne({ _id: new ObjectId(id) }, { $set: updateData });
+    const updated = await books.findOne({ _id: new ObjectId(id) });
+    res.json({ message: "Book updated.", book: formatBook(updated) });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to update book." });
+  }
+}
+
+app.put("/api/books/:id", verifyJWT, handleUpdateBook);
+app.patch("/api/books/:id", verifyJWT, handleUpdateBook);
+app.put("/books/:id", verifyJWT, handleUpdateBook);
+app.patch("/books/:id", verifyJWT, handleUpdateBook);
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
