@@ -323,6 +323,43 @@ app.post("/borrows", verifyJWT, handleBorrowBook);
 
 
 
+async function handleReturnOrDeleteBorrow(req, res) {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid borrow ID." });
+
+    const borrow = await borrows.findOne({ _id: new ObjectId(id) });
+    if (!borrow) return res.status(404).json({ message: "Borrow record not found." });
+
+    if (!borrow.returnedAt && ObjectId.isValid(borrow.bookId)) {
+      await books.updateOne({ _id: new ObjectId(borrow.bookId) }, { $inc: { availableCopies: 1 } });
+    }
+
+    if (req.method === "DELETE") {
+      await borrows.deleteOne({ _id: new ObjectId(id) });
+      return res.json({ message: "Borrow record deleted and copy restored." });
+    }
+
+    const now = new Date().toISOString();
+    await borrows.updateOne({ _id: new ObjectId(id) }, { $set: { returnedAt: now, status: "returned" } });
+
+    const updatedBorrow = await borrows.findOne({ _id: new ObjectId(id) });
+    const bookDoc = ObjectId.isValid(borrow.bookId) ? await books.findOne({ _id: new ObjectId(borrow.bookId) }) : null;
+
+    res.json({ message: "Book returned.", borrow: formatBorrow(updatedBorrow, bookDoc) });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to return book." });
+  }
+}
+
+app.put("/api/borrows/:id", verifyJWT, handleReturnOrDeleteBorrow);
+app.put("/borrows/:id", verifyJWT, handleReturnOrDeleteBorrow);
+app.delete("/api/borrows/:id", verifyJWT, handleReturnOrDeleteBorrow);
+app.delete("/borrows/:id", verifyJWT, handleReturnOrDeleteBorrow);
+
+
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
