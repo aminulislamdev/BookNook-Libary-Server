@@ -50,6 +50,33 @@ function formatBook(doc) {
   };
 }
 
+
+function formatBorrow(doc, bookDoc = null) {
+  if (!doc) return null;
+  const { _id, ...rest } = doc;
+  const borrowDate = doc.borrowDate || doc.borrowedAt || doc.createdAt || new Date().toISOString();
+  const returnDate = doc.returnDate || doc.dueDate || "";
+
+  return {
+    id: _id.toString(),
+    ...rest,
+    bookId: doc.bookId?.toString() || "",
+    bookTitle: doc.bookTitle || bookDoc?.title || "",
+    bookImage: doc.bookImage || bookDoc?.image || "",
+    userName: doc.userName || "",
+    userEmail: doc.userEmail || "",
+    userId: doc.userId || "",
+    borrowDate,
+    borrowedAt: doc.borrowedAt || borrowDate,
+    returnDate,
+    dueDate: doc.dueDate || returnDate,
+    returnedAt: doc.returnedAt ?? null,
+    status: doc.status || (doc.returnedAt ? "returned" : "active"),
+    book: bookDoc ? formatBook(bookDoc) : (doc.book ? formatBook(doc.book) : null),
+  };
+}
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
