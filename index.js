@@ -23,6 +23,33 @@ const database = connectedClient.db("booknook");
 const books = database.collection("books");
 const borrows = database.collection("borrows");
 
+
+function formatBook(doc) {
+  if (!doc) return null;
+  const { _id, ...rest } = doc;
+  const total = Number(doc.totalCopies ?? 1);
+  const available = Number(doc.availableCopies ?? total);
+
+  return {
+    id: _id.toString(),
+    ...rest,
+    title: doc.title || "",
+    author: doc.author || "",
+    category: doc.category || "Fiction",
+    description: doc.description || "",
+    image: doc.image || "",
+    totalCopies: total,
+    availableCopies: available,
+    addedBy: doc.addedBy || {
+      id: doc.userId || "",
+      name: doc.userName || "Anonymous",
+      email: doc.userEmail || "",
+    },
+    createdAt: doc.createdAt || new Date().toISOString(),
+    updatedAt: doc.updatedAt || new Date().toISOString(),
+  };
+}
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
