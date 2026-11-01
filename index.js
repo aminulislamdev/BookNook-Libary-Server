@@ -29,6 +29,23 @@ const books = database.collection("books");
 const borrows = database.collection("borrows");
 
 
+export async function verifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader) return res.status(401).json({ message: "No token provided." });
+
+  const token = authHeader.startsWith("Bearer ") ? authHeader.split(" ")[1] : authHeader;
+  if (!token) return res.status(401).json({ message: "Invalid token format." });
+
+  try {
+    const { payload } = await jwtVerify(token, JWKS);
+    req.user = { id: payload.id || payload.sub, email: payload.email, name: payload.name };
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: "Invalid or expired token." });
+  }
+}
+
+
 function formatBook(doc) {
   if (!doc) return null;
   const { _id, ...rest } = doc;
