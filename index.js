@@ -119,6 +119,26 @@ async function handleGetBooks(req, res) {
 app.get("/api/books", handleGetBooks);
 app.get("/books", handleGetBooks);
 
+
+async function handleGetBookById(req, res) {
+  try {
+    const { id } = req.params;
+    if (!ObjectId.isValid(id)) return res.status(400).json({ message: "Invalid book ID." });
+
+    const book = await books.findOne({ _id: new ObjectId(id) });
+    if (!book) return res.status(404).json({ message: "Book not found." });
+
+    const formatted = formatBook(book);
+    res.json({ book: formatted, ...formatted });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch book." });
+  }
+}
+
+app.get("/api/books/:id", handleGetBookById);
+app.get("/books/:id", handleGetBookById);
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
