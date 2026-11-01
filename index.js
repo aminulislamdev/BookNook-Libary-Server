@@ -78,7 +78,20 @@ function formatBorrow(doc, bookDoc = null) {
 
 async function handleGetBooks(req, res) {
   try {
-    const rawBooks = await books.find({}).sort({ _id: -1 }).toArray();
+    const { search, q, category } = req.query;
+    const filter = {};
+
+    const searchTerm = (search || q || "").trim();
+    if (searchTerm) {
+      filter.$or = [
+        { title: { $regex: searchTerm, $options: "i" } },
+        { author: { $regex: searchTerm, $options: "i" } },
+      ];
+    }
+
+    if (category && category !== "All") filter.category = category;
+
+    const rawBooks = await books.find(filter).sort({ _id: -1 }).toArray();
     res.json({ books: rawBooks.map(formatBook), total: rawBooks.length });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch books." });
