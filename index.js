@@ -78,7 +78,7 @@ function formatBorrow(doc, bookDoc = null) {
 
 async function handleGetBooks(req, res) {
   try {
-    const { search, q, category } = req.query;
+    const { search, q, category, page = "1", limit, sort = "newest" } = req.query;
     const filter = {};
 
     const searchTerm = (search || q || "").trim();
@@ -88,11 +88,29 @@ async function handleGetBooks(req, res) {
         { author: { $regex: searchTerm, $options: "i" } },
       ];
     }
-
     if (category && category !== "All") filter.category = category;
 
-    const rawBooks = await books.find(filter).sort({ _id: -1 }).toArray();
-    res.json({ books: rawBooks.map(formatBook), total: rawBooks.length });
+    const sortOption = sort === "newest" ? { _id: -1 } : { title: 1 };
+    const total = await books.countDocuments(filter);
+    const parsedPage = Math.max(1, parseInt(page, 10) || 1);
+
+    let query = books.find(filter).sort(sortOption);
+    let parsedLimit = total;
+
+    if (limit) {
+      parsedLimit = Math.max(1, parseInt(limit, 10));
+      const skip = (parsedPage - 1) * parsedLimit;
+      query = query.skip(skip).limit(parsedLimit);
+    }
+
+    const rawBooks = await query.toArray();
+    const totalPages = parsedLimit > 0 ? Math.ceil(total / parsedLimit) : 1;
+
+    res.json({
+      books: rawBooks.map(formatBook),
+      total, page: parsedPage, limit: parsedLimit,
+      totalPages: totalPages === 0 ? 1 : totalPages,
+    });
   } catch (err) {
     res.status(500).json({ message: "Failed to fetch books." });
   }
