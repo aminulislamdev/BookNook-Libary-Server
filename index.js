@@ -38,7 +38,7 @@ const borrows = database.collection("borrows");
 // --------------------------------------------------------------------------
 // ✅ Better Auth JWT Verification Middleware (JWKS)
 // --------------------------------------------------------------------------
-const NEXTJS_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+const NEXTJS_APP_URL = process.env.NEXT_PUBLIC_APP_URL || "https://booknook-c-ph.vercel.app";
 const JWKS = createRemoteJWKSet(
   new URL(`${NEXTJS_APP_URL}/api/auth/jwks`)
 );
