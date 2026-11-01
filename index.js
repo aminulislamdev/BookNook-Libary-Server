@@ -252,6 +252,30 @@ app.delete("/books/:id", verifyJWT, handleDeleteBook);
 
 
 
+async function handleGetBorrows(req, res) {
+  try {
+    const effectiveUserId = req.user?.id;
+    const effectiveEmail = req.user?.email;
+    if (!effectiveUserId && !effectiveEmail) return res.status(401).json({ message: "User not found." });
+
+    const filter = { $or: [{ userId: effectiveUserId }, { userEmail: effectiveEmail }] };
+    const rawBorrows = await borrows.find(filter).sort({ _id: -1 }).toArray();
+
+    const bookIds = [...new Set(rawBorrows.map(b => b.bookId).filter(id => ObjectId.isValid(id)).map(id => new ObjectId(id)))];
+    const relatedBooks = bookIds.length ? await books.find({ _id: { $in: bookIds } }).toArray() : [];
+    const booksMap = new Map(relatedBooks.map(b => [b._id.toString(), b]));
+
+    res.json({ borrows: rawBorrows.map(borrow => formatBorrow(borrow, booksMap.get(borrow.bookId))) });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch borrows." });
+  }
+}
+
+app.get("/api/borrows", verifyJWT, handleGetBorrows);
+app.get("/borrows", verifyJWT, handleGetBorrows);
+
+
+
 app.get("/", (req, res) => {
   res.send("BookNook API is running.");
 });
