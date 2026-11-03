@@ -240,6 +240,16 @@ async function handleAddBook(req, res) {
       return res.status(400).json({ message: "Title and author are required." });
     }
 
+    const existingBook = await books.findOne({
+      title: { $regex: `^${title.trim()}$`, $options: "i" },
+    });
+
+    if (existingBook) {
+      return res.status(400).json({
+        message: `"${title.trim()}" already exists in the library. You cannot add the same book twice.`
+      });
+    }
+
     const copies = Math.max(1, parseInt(totalCopies, 10) || 1);
     const now = new Date().toISOString();
 
